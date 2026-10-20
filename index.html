@@ -898,7 +898,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { 
             getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, 
-            onSnapshot, query, where, getDocs, writeBatch, getDoc, orderBy 
+            onSnapshot, query, where, getDocs, writeBatch, getDoc, orderBy,
+            enableIndexedDbPersistence 
         } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
         import { 
             getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut 
@@ -920,51 +921,173 @@
         const prepaymentCollection = collection(db, "gogi_prepayments");
         const trashCollection = collection(db, "gogi_prepayment_trash");
 
+        // 오프라인 / 멀티탭 지속성 지원 (모바일/태블릿 연결 안정화)
+        try {
+            enableIndexedDbPersistence(db).catch((err) => {
+                if (err.code === 'failed-precondition') {
+                    console.warn("오프라인 지속성: 여러 탭이 열려 있어 활성화되지 않았습니다.");
+                } else if (err.code === 'unimplemented') {
+                    console.warn("오프라인 지속성: 브라우저가 지원하지 않습니다.");
+                }
+            });
+        } catch (e) {}
+
         window.prepayments = [];
         let unsubscribeSnapshot = null;
+        let isInitialLoad = true;
 
-        // 사운드 차임벨
+        // 실시간 연동 배지 상태 갱신 함수
+        function updateSyncBadge(status, count = 0) {
+            const badge = document.getElementById('syncBadge');
+            if (!badge) return;
+            if (status === 'connected') {
+                badge.style.backgroundColor = '#2b8a3e';
+                badge.innerHTML = `🟢 실시간 연동됨 (${count}건)`;
+            } else if (status === 'connecting') {
+                badge.style.backgroundColor = '#e67700';
+                badge.innerHTML = `🟡 실시간 연결 중...`;
+            } else if (status === 'offline') {
+                badge.style.backgroundColor = '#fa5252';
+                badge.innerHTML = `🔴 오프라인 (재연결 대기)`;
+            }
+        }
+        window.updateSyncBadge = updateSyncBadge;
+
+        // 청아한 딩동 차임벨 (Web Audio API)
         function playChime() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
-                osc.start(audioCtx.currentTime);
-                osc.stop(audioCtx.currentTime + 0.35);
+                const now = audioCtx.currentTime;
+
+                // 1번째 음 (E5: 659.25Hz)
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(659.25, now);
+                gain1.gain.setValueAtTime(0.12, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                osc1.start(now);
+                osc1.stop(now + 0.35);
+
+                // 2번째 음 (A5: 880Hz, 0.12초 뒤)
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(880, now + 0.12);
+                gain2.gain.setValueAtTime(0.14, now + 0.12);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+                osc2.start(now + 0.12);
+                osc2.stop(now + 0.55);
             } catch (e) {}
         }
+        window.playChime = playChime;
 
-        // 실시간 동기화 리스너: 페이지 로드 즉시 Firestore와 동기화
+        // 시스템 푸시 알림 트리거 (모바일/PC 공용)
+        function triggerNotification(title, body, docId) {
+            playChime();
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                try {
+                    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                        navigator.serviceWorker.ready.then(reg => {
+                            reg.showNotification(title, {
+                                body: body,
+                                icon: 'icon-192.png',
+                                badge: 'icon-32.png',
+                                tag: docId || 'prepayment-' + Date.now(),
+                                vibrate: [200, 100, 200]
+                            });
+                        });
+                    } else {
+                        new Notification(title, { body, icon: 'icon-192.png' });
+                    }
+                } catch (e) {}
+            }
+        }
+        window.triggerNotification = triggerNotification;
+
+        // 서비스 워커 등록 (PWA 및 백그라운드 푸시)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(err => {
+                console.warn('서비스 워커 등록 실패:', err);
+            });
+        }
+
+        // 알림 권한 요청 (최초 화면 터치/클릭 시 자동 요청)
+        function requestNotificationPermissionOnce() {
+            if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                Notification.requestPermission().catch(() => {});
+            }
+        }
+        window.addEventListener('click', requestNotificationPermissionOnce, { once: true });
+        window.addEventListener('touchstart', requestNotificationPermissionOnce, { once: true });
+
+        // 네트워크 상태 감지 리스너
+        window.addEventListener('online', () => {
+            updateSyncBadge('connected', (window.prepayments || []).length);
+            if (window.showToast) window.showToast('온라인에 다시 연결되었습니다.');
+        });
+        window.addEventListener('offline', () => {
+            updateSyncBadge('offline');
+            if (window.showToast) window.showToast('네트워크 연결이 끊어졌습니다. (오프라인 모드)');
+        });
+
+        // 실시간 동기화 리스너: Firestore의 모든 변경을 실시간 감지하여 모든 기기에 전파
         function startPrepaymentSync() {
             if (unsubscribeSnapshot) return;
+            updateSyncBadge('connecting');
+
             unsubscribeSnapshot = onSnapshot(prepaymentCollection, (snapshot) => {
-                window.prepayments = [];
+                const list = [];
                 snapshot.forEach(doc => {
-                    window.prepayments.push({ id: doc.id, ...doc.data() });
+                    list.push({ id: doc.id, ...doc.data() });
                 });
-                
+                window.prepayments = list;
+                updateSyncBadge('connected', list.length);
+
+                // 초기 로드 이후 다른 기기에서 발생한 변경사항 실시간 감지
+                if (!isInitialLoad) {
+                    snapshot.docChanges().forEach(change => {
+                        const data = change.doc.data();
+                        if (change.type === 'added') {
+                            const name = data.name || '고객';
+                            const amt = Number(data.amount || 0).toLocaleString();
+                            triggerNotification('🥩 새 선입금 등록!', `${name}님의 선입금 ${amt}원이 새로 등록되었습니다.`, change.doc.id);
+                            if (window.showToast) window.showToast(`🔔 [새 선입금] ${name}님 (${amt}원)`);
+                        } else if (change.type === 'modified') {
+                            const name = data.name || '고객';
+                            const rem = Number(data.amount || 0).toLocaleString();
+                            if (window.showToast) window.showToast(`📝 [내역 갱신] ${name}님 (남은잔액: ${rem}원)`);
+                            // 상세 모달이 열려 있는 대상이라면 상세 모달 내용 실시간 갱신
+                            if (window.currentDetailId === change.doc.id && typeof window.openDetailModal === 'function') {
+                                window.openDetailModal(change.doc.id);
+                            }
+                        }
+                    });
+                } else {
+                    isInitialLoad = false;
+                }
+
                 if (window.onPrepaymentDataLoaded) {
                     window.onPrepaymentDataLoaded();
                 }
             }, (error) => {
                 console.error("실시간 동기화 에러:", error);
+                updateSyncBadge('offline');
             });
         }
         startPrepaymentSync();
 
-        // 인증 상태 유지 (옵션)
+        // 익명 인증으로 세션 및 권한 유지
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 try {
                     await signInAnonymously(auth);
                 } catch (e) {
-                    // 익명 인증이 비활성화되어 있어도 Firestore Rules allow read/write: if true로 정상 동작
+                    // Firestore rules allow read/write: if true로도 통신
                 }
             }
         });
@@ -1181,7 +1304,7 @@
     <header>
         <div class="header-title-container">
             <h1>🥩 으랏차 선입금 관리</h1>
-            <span class="sync-badge">📡 실시간 연동중</span>
+            <span class="sync-badge" id="syncBadge">📡 실시간 연동중</span>
         </div>
         <div class="font-scale-control" aria-label="글씨 크기 조절">
             <span class="font-scale-label">글씨 크기</span>
