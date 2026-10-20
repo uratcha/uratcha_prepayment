@@ -1,0 +1,2424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🥩 으랏차 선입금 관리 시스템</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="선입금관리">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+    <style>
+        :root {
+            --primary: #ff4d4d;
+            --primary-hover: #e63e3e;
+            --primary-light: #fff5f5;
+            --bg-body: #f8f9fa;
+            --surface: #ffffff;
+            --border: #dee2e6;
+            --text-main: #212529;
+            --text-sub: #495057;
+            --text-muted: #868e96;
+            
+            --status-holding-bg: #fff9db;
+            --status-holding-text: #e67700;
+            --status-holding-border: #ffec99;
+            
+            --status-used-bg: #ebfbee;
+            --status-used-text: #2b8a3e;
+            --status-used-border: #b2f2bb;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 16px;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100vh;
+        }
+
+        /* ------------------ 헤더 ------------------ */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e9ecef;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header-title-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #111;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sync-badge {
+            font-size: 11px;
+            background-color: #2b8a3e;
+            color: white;
+            padding: 4px 9px;
+            border-radius: 20px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ------------------ 글씨 크기 조절 컨트롤 ------------------ */
+        .font-scale-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            padding: 5px 10px;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .font-scale-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6c757d;
+        }
+        .font-scale-btns {
+            display: inline-flex;
+            gap: 4px;
+        }
+        .btn-font-scale {
+            background: #f1f3f5;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            padding: 4px 9px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .btn-font-scale:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        .btn-font-scale.active {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 2px 6px rgba(255, 77, 77, 0.25);
+        }
+
+        /* 글자 크기 모드별 배율 */
+        html.font-sm {
+            zoom: 0.88;
+        }
+        html.font-md {
+            zoom: 1;
+        }
+        html.font-lg {
+            zoom: 1.15;
+        }
+        @supports not (zoom: 1) {
+            html.font-sm body { font-size: 13.5px; }
+            html.font-lg body { font-size: 18px; }
+        }
+
+        /* ------------------ 메인 네비게이션 탭 (3구분) ------------------ */
+        .main-nav {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .nav-btn {
+            background: #ffffff;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 14px 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            font-family: inherit;
+        }
+        .nav-btn:hover {
+            border-color: #adb5bd;
+            background-color: #f8f9fa;
+        }
+        .nav-btn.active {
+            border-color: var(--primary);
+            background: #ffffff;
+            box-shadow: 0 4px 14px rgba(255, 77, 77, 0.2);
+        }
+        .nav-icon {
+            font-size: 24px;
+        }
+        .nav-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #343a40;
+        }
+        .nav-btn.active .nav-title {
+            color: var(--primary);
+        }
+        .nav-sub {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ------------------ 뷰 컨테이너 ------------------ */
+        .view-section {
+            display: none;
+            max-width: 800px;
+            margin: 0 auto;
+            animation: fadeIn 0.25s ease;
+        }
+        .view-section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========================================================
+           1. 새 선입금 (손님 직접 입력 모드)
+           ======================================================== */
+        .customer-card-box {
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+            padding: 28px 24px;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+        .card-box-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .card-box-header h2 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #111;
+            margin-bottom: 6px;
+        }
+        .card-box-header p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        .form-group {
+            margin-bottom: 18px;
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #495057;
+            margin-bottom: 6px;
+        }
+        .form-input {
+            width: 100%;
+            height: 48px;
+            padding: 0 16px;
+            border: 1.5px solid #ced4da;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            background: #ffffff;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3.5px rgba(255, 77, 77, 0.15);
+        }
+        .amount-quick-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .quick-btn {
+            flex: 1;
+            min-width: 60px;
+            height: 38px;
+            font-size: 13px;
+            font-weight: 700;
+            background: #f1f3f5;
+            color: #495057;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .quick-btn:hover {
+            background: #e9ecef;
+            border-color: #ced4da;
+        }
+        .quick-btn:active {
+            transform: scale(0.96);
+        }
+        .quick-btn.reset {
+            background: #fff5f5;
+            color: #fa5252;
+            border-color: #ffc9c9;
+        }
+        .btn-submit-large {
+            width: 100%;
+            height: 52px;
+            background: var(--primary);
+            color: white;
+            font-size: 17px;
+            font-weight: 800;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 14px rgba(255, 77, 77, 0.3);
+            transition: background 0.2s, transform 0.1s;
+            font-family: inherit;
+        }
+        .btn-submit-large:hover {
+            background: var(--primary-hover);
+        }
+        .btn-submit-large:active {
+            transform: scale(0.98);
+        }
+
+        /* 손님 완료 모달 */
+        .complete-modal-box {
+            text-align: center;
+            padding: 36px 24px;
+        }
+        .complete-icon {
+            font-size: 56px;
+            margin-bottom: 12px;
+            animation: bounce 1s infinite alternate;
+        }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+
+        /* ========================================================
+           2. 선입금 사용 (고객 검색 및 차감 모드)
+           ======================================================== */
+        .search-container {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 16px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            margin-bottom: 20px;
+        }
+        .search-input-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .search-input-box input {
+            width: 100%;
+            height: 48px;
+            padding: 0 44px 0 42px;
+            border: 2px solid #ced4da;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .search-input-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.15);
+        }
+        .search-icon-left {
+            position: absolute;
+            left: 14px;
+            font-size: 18px;
+            color: #868e96;
+            pointer-events: none;
+        }
+        .search-clear-btn {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #adb5bd;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .search-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 0 4px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+        .use-cards-grid {
+            display: grid;
+            gap: 12px;
+        }
+        .use-card {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .use-card:hover {
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+            transform: translateY(-2px);
+        }
+        .use-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .badge {
+            font-size: 12px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge.holding {
+            background-color: var(--status-holding-bg);
+            color: var(--status-holding-text);
+            border: 1px solid var(--status-holding-border);
+        }
+        .badge.used {
+            background-color: var(--status-used-bg);
+            color: var(--status-used-text);
+            border: 1px solid var(--status-used-border);
+        }
+        .use-card-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .use-card-cust {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .use-cust-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: #111;
+        }
+        .use-cust-phone {
+            font-size: 14px;
+            color: #495057;
+            font-weight: 600;
+        }
+        .use-card-amount-box {
+            text-align: right;
+        }
+        .use-amount-label {
+            font-size: 12px;
+            color: #868e96;
+            font-weight: 600;
+        }
+        .use-amount-val {
+            font-size: 22px;
+            font-weight: 800;
+            color: #c92a2a;
+        }
+        .use-card-meta {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            border-top: 1px dashed #f1f3f5;
+            padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .btn-use-action {
+            height: 44px;
+            border-radius: 10px;
+            font-size: 14.5px;
+            font-weight: 800;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .btn-use-action.ready {
+            background: #2b8a3e;
+            color: #ffffff;
+            box-shadow: 0 3px 10px rgba(43,138,62,0.25);
+        }
+        .btn-use-action.ready:hover {
+            background: #237032;
+        }
+        .btn-use-action.done {
+            background: #e9ecef;
+            color: #868e96;
+            cursor: default;
+        }
+
+        /* ========================================================
+           3. 직원 관리용 (보안 대시보드)
+           ======================================================== */
+        .admin-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .admin-kpi-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #dee2e6;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .admin-kpi-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+        .admin-kpi-val {
+            font-size: 20px;
+            font-weight: 800;
+            color: #111;
+        }
+        .admin-kpi-sub {
+            font-size: 11.5px;
+            color: var(--text-muted);
+        }
+        .admin-toolbar {
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .admin-tab-group {
+            display: flex;
+            gap: 6px;
+        }
+        .admin-filter-tab {
+            padding: 7px 12px;
+            font-size: 12.5px;
+            font-weight: 700;
+            border-radius: 20px;
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .admin-filter-tab.active {
+            background: #212529;
+            color: #fff;
+            border-color: #212529;
+        }
+        .admin-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-admin-tool {
+            height: 36px;
+            padding: 0 12px;
+            font-size: 12.5px;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid #ced4da;
+            background: #ffffff;
+            color: #495057;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .btn-admin-tool:hover {
+            background: #f1f3f5;
+        }
+        .btn-admin-tool.lock {
+            border-color: #fa5252;
+            color: #fa5252;
+            background: #fff5f5;
+        }
+
+        /* 관리자 테이블/카드 */
+        .admin-list {
+            display: grid;
+            gap: 10px;
+        }
+        .admin-item-card {
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .admin-item-left {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .admin-item-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 800;
+            color: #212529;
+        }
+        .admin-item-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            gap: 10px;
+        }
+        .admin-item-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .admin-item-amount {
+            font-size: 18px;
+            font-weight: 800;
+            color: #c92a2a;
+        }
+        .admin-item-btns {
+            display: flex;
+            gap: 6px;
+        }
+        .btn-mini {
+            padding: 6px 10px;
+            font-size: 11.5px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid #ced4da;
+            background: #ffffff;
+            color: #495057;
+            font-family: inherit;
+        }
+        .btn-mini:hover {
+            background: #f8f9fa;
+        }
+        .btn-mini.danger {
+            color: #fa5252;
+            border-color: #ffc9c9;
+            background: #fff5f5;
+        }
+        .btn-mini.info {
+            color: #1971c2;
+            border-color: #a5d8ff;
+            background: #e7f5ff;
+        }
+        .btn-mini.info:hover {
+            background: #d0ebff;
+        }
+        .btn-mini.success {
+            color: #2b8a3e;
+            border-color: #b2f2bb;
+            background: #ebfbee;
+        }
+        .btn-mini.success:hover {
+            background: #d3f9d8;
+        }
+
+        /* 상세정보 모달 스타일 */
+        .detail-summary-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .detail-summary-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .detail-summary-card.highlight {
+            background: #fff5f5;
+            border-color: #ffc9c9;
+            grid-column: span 2;
+        }
+        .detail-summary-label {
+            font-size: 12px;
+            color: #868e96;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .detail-summary-val {
+            font-size: 16px;
+            font-weight: 800;
+            color: #212529;
+        }
+        .detail-summary-val.large {
+            font-size: 22px;
+            color: #e03131;
+        }
+        .detail-info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 13.5px;
+            color: #495057;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+        .detail-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .detail-info-row span:first-child {
+            color: #868e96;
+            font-weight: 600;
+        }
+        .detail-info-row span:last-child {
+            font-weight: 700;
+            color: #212529;
+        }
+        .detail-history-list {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .detail-history-item {
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ------------------ 암호 입력 모달 (직원 전용) ------------------ */
+        .pin-modal-content {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 28px 24px;
+            width: 100%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.25);
+        }
+        .pin-icon {
+            font-size: 42px;
+            margin-bottom: 8px;
+        }
+        .pin-input {
+            width: 100%;
+            height: 52px;
+            text-align: center;
+            font-size: 26px;
+            letter-spacing: 12px;
+            border: 2px solid #ced4da;
+            border-radius: 12px;
+            outline: none;
+            margin: 18px 0 14px 0;
+            font-weight: 800;
+            -webkit-text-security: disc;
+            text-security: disc;
+        }
+        .pin-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(255,77,77,0.15);
+        }
+        .pin-error {
+            color: #fa5252;
+            font-size: 13px;
+            font-weight: 600;
+            min-height: 18px;
+            margin-bottom: 12px;
+        }
+
+        /* ------------------ 공통 모달 스타일 ------------------ */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(2px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 12px;
+        }
+        .modal-content {
+            background: #ffffff;
+            padding: 22px;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #f1f3f5;
+            padding-bottom: 10px;
+        }
+        .modal-close-icon {
+            background: none; border: none; font-size: 20px; cursor: pointer; color: #868e96;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid #e9ecef;
+        }
+        .btn-modal {
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+        }
+        .btn-modal-submit { background-color: var(--primary); color: white; }
+        .btn-modal-cancel { background-color: #e9ecef; color: #495057; }
+
+        /* 토스트 */
+        .toast {
+            position: fixed;
+            bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #212529; color: #fff;
+            padding: 12px 22px; border-radius: 30px;
+            font-size: 14px; font-weight: 700;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+            z-index: 3000; opacity: 0; pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* 빈 상태 */
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .empty-state-icon { font-size: 40px; }
+        .empty-state-title { font-size: 15.5px; font-weight: 700; color: #495057; }
+
+        @media (max-width: 680px) {
+            body { padding: 10px; }
+            .main-nav { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+            .nav-btn { padding: 10px 4px; }
+            .nav-title { font-size: 13.5px; }
+            .nav-sub { display: none; }
+            .admin-kpi-grid { grid-template-columns: 1fr; }
+            .admin-item-card { flex-direction: column; align-items: stretch; }
+            .admin-item-right { justify-content: space-between; margin-top: 6px; }
+        }
+    </style>
+
+    <!-- Firebase Modular SDK v9.22.1 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { 
+            getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, 
+            onSnapshot, query, where, getDocs, writeBatch, getDoc, orderBy 
+        } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { 
+            getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut 
+        } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAHaWjpCYJq4rnBqEBERzRv5o66QN7ouEU",
+            authDomain: "uratcha-reserve.firebaseapp.com",
+            projectId: "uratcha-reserve",
+            storageBucket: "uratcha-reserve.firebasestorage.app",
+            messagingSenderId: "717217713757",
+            appId: "1:717217713757:web:8f8b36c898522ebddec7b4",
+            measurementId: "G-7CK368H53B"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const prepaymentCollection = collection(db, "gogi_prepayments");
+        const trashCollection = collection(db, "gogi_prepayment_trash");
+
+        window.prepayments = [];
+        let unsubscribeSnapshot = null;
+
+        // 사운드 차임벨
+        function playChime() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.35);
+            } catch (e) {}
+        }
+
+        // 실시간 동기화 리스너: 페이지 로드 즉시 Firestore와 동기화
+        function startPrepaymentSync() {
+            if (unsubscribeSnapshot) return;
+            unsubscribeSnapshot = onSnapshot(prepaymentCollection, (snapshot) => {
+                window.prepayments = [];
+                snapshot.forEach(doc => {
+                    window.prepayments.push({ id: doc.id, ...doc.data() });
+                });
+                
+                if (window.onPrepaymentDataLoaded) {
+                    window.onPrepaymentDataLoaded();
+                }
+            }, (error) => {
+                console.error("실시간 동기화 에러:", error);
+            });
+        }
+        startPrepaymentSync();
+
+        // 인증 상태 유지 (옵션)
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                try {
+                    await signInAnonymously(auth);
+                } catch (e) {
+                    // 익명 인증이 비활성화되어 있어도 Firestore Rules allow read/write: if true로 정상 동작
+                }
+            }
+        });
+
+        // 전역 Firebase 래퍼
+        window.db_add = async (data) => {
+            const res = await addDoc(prepaymentCollection, data);
+            playChime();
+            return res;
+        };
+
+        window.db_update = async (id, data) => updateDoc(doc(db, "gogi_prepayments", id), data);
+
+        // 선입금 차감 처리 함수
+        window.db_deductPrepayment = async (id, deductAmount, deductDate, note) => {
+            const activeRef = doc(db, "gogi_prepayments", id);
+            let p = window.prepayments.find(item => item.id === id);
+            if (!p) {
+                const snap = await getDoc(activeRef);
+                if (snap.exists()) {
+                    p = { id: snap.id, ...snap.data() };
+                }
+            }
+            if (!p) throw new Error("선입금 내역을 찾을 수 없습니다.");
+
+            const originalAmount = (p.originalAmount !== undefined) ? p.originalAmount : Number(p.amount || 0);
+            const prevUsed = Number(p.usedAmount || 0);
+            const currentAmount = Number(p.amount || 0);
+            const deduct = Number(deductAmount);
+
+            if (deduct <= 0) throw new Error("차감할 금액을 0원보다 크게 입력해주세요.");
+            if (deduct > currentAmount) throw new Error("차감할 금액이 현재 보유 선입금 잔액보다 큽니다.");
+
+            const remainingAmount = currentAmount - deduct;
+            const newUsedAmount = prevUsed + deduct;
+            const newStatus = (remainingAmount === 0) ? 'used' : 'holding';
+
+            const historyItem = {
+                date: deductDate,
+                amount: deduct,
+                remaining: remainingAmount,
+                note: note,
+                timestamp: new Date().toISOString()
+            };
+
+            const existingHistory = Array.isArray(p.useHistory) ? p.useHistory : [];
+            const newHistory = [...existingHistory, historyItem];
+
+            // 메모에 차감일자와 금액 표기
+            const formattedDateNote = `[${deductDate}] ${deduct.toLocaleString()}원 차감${note ? ` (${note})` : ''}`;
+
+            const updateData = {
+                originalAmount: originalAmount,
+                amount: remainingAmount,
+                remainingAmount: remainingAmount,
+                usedAmount: newUsedAmount,
+                status: newStatus,
+                usedAt: new Date().toISOString(),
+                usedDate: deductDate,
+                useNote: formattedDateNote,
+                useHistory: newHistory
+            };
+
+            await updateDoc(activeRef, updateData);
+            playChime();
+            return updateData;
+        };
+
+        // 선입금 차감 되돌리기 (취소 및 잔액 복원)
+        window.db_revertDeduct = async (id, historyIndex) => {
+            const activeRef = doc(db, "gogi_prepayments", id);
+            let p = (window.prepayments || []).find(item => item.id === id);
+            if (!p) {
+                const snap = await getDoc(activeRef);
+                if (snap.exists()) {
+                    p = { id: snap.id, ...snap.data() };
+                }
+            }
+            if (!p) throw new Error("선입금 내역을 찾을 수 없습니다.");
+
+            const history = Array.isArray(p.useHistory) ? [...p.useHistory] : [];
+            if (historyIndex < 0 || historyIndex >= history.length) {
+                throw new Error("해당 차감 기록을 찾을 수 없습니다.");
+            }
+
+            const itemToRevert = history[historyIndex];
+            const revertAmt = Number(itemToRevert.amount || 0);
+
+            // 해당 히스토리 항목 제거
+            history.splice(historyIndex, 1);
+
+            const currentRemaining = Number(p.amount || 0);
+            const currentUsed = Number(p.usedAmount || 0);
+
+            const newRemaining = currentRemaining + revertAmt;
+            const newUsedAmount = Math.max(0, currentUsed - revertAmt);
+            const newStatus = (newRemaining > 0) ? 'holding' : 'used';
+
+            // 최근 메모 갱신
+            let latestNote = '';
+            let latestDate = '';
+            let latestAt = '';
+            if (history.length > 0) {
+                const last = history[history.length - 1];
+                latestDate = last.date || '';
+                latestAt = last.timestamp || '';
+                latestNote = `[${latestDate}] ${Number(last.amount || 0).toLocaleString()}원 차감${last.note ? ` (${last.note})` : ''}`;
+            }
+
+            const updateData = {
+                amount: newRemaining,
+                remainingAmount: newRemaining,
+                usedAmount: newUsedAmount,
+                status: newStatus,
+                usedDate: latestDate,
+                usedAt: latestAt,
+                useNote: latestNote,
+                useHistory: history
+            };
+
+            await updateDoc(activeRef, updateData);
+            playChime();
+            return { revertAmt, newRemaining, updateData };
+        };
+
+        // 안전한 휴지통 이동 (삭제)
+        window.db_moveToTrash = async (id) => {
+            const activeRef = doc(db, "gogi_prepayments", id);
+            const trashRef = doc(db, "gogi_prepayment_trash", id);
+
+            let target = (window.prepayments || []).find(p => p.id === id);
+            if (!target) {
+                const snap = await getDoc(activeRef);
+                if (snap.exists()) {
+                    target = { id: snap.id, ...snap.data() };
+                }
+            }
+            if (!target) throw new Error("삭제할 선입금 내역을 찾을 수 없습니다.");
+
+            const trashData = { ...target, trashedAt: new Date().toISOString() };
+            delete trashData.id;
+
+            const batch = writeBatch(db);
+            batch.set(trashRef, trashData);
+            batch.delete(activeRef);
+            await batch.commit();
+        };
+
+        window.db_getTrashList = async () => {
+            const snapshot = await getDocs(query(trashCollection));
+            const items = [];
+            snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+            items.sort((a, b) => (b.trashedAt || '').localeCompare(a.trashedAt || ''));
+            return items;
+        };
+
+        window.db_restoreFromTrash = async (id) => {
+            const trashRef = doc(db, "gogi_prepayment_trash", id);
+            const activeRef = doc(db, "gogi_prepayments", id);
+            const targetDoc = await getDoc(trashRef);
+            if (!targetDoc.exists()) return;
+            const { trashedAt, ...restoreData } = targetDoc.data();
+
+            const batch = writeBatch(db);
+            batch.set(activeRef, restoreData);
+            batch.delete(trashRef);
+            await batch.commit();
+        };
+
+        window.db_permanentDelete = async (id) => deleteDoc(doc(db, "gogi_prepayment_trash", id));
+        window.db_emptyTrash = async () => {
+            const snapshot = await getDocs(trashCollection);
+            const batch = writeBatch(db);
+            snapshot.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        };
+
+        // 30일이 지난 휴지통 데이터 자동 영구 삭제
+        window.db_autoPurgeOldTrash = async () => {
+            try {
+                const snapshot = await getDocs(trashCollection);
+                const now = Date.now();
+                const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+                const batch = writeBatch(db);
+                let count = 0;
+
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.trashedAt) {
+                        const trashedTime = new Date(data.trashedAt).getTime();
+                        if (!isNaN(trashedTime) && (now - trashedTime > THIRTY_DAYS_MS)) {
+                            batch.delete(docSnap.ref);
+                            count++;
+                        }
+                    }
+                });
+
+                if (count > 0) {
+                    await batch.commit();
+                    console.log(`[휴지통 자동정리] 30일 경과 내역 ${count}건 영구 삭제 완료.`);
+                }
+            } catch (err) {
+                console.error("휴지통 자동정리 에러:", err);
+            }
+        };
+
+        // 앱 구동 시 30일 경과 휴지통 자동 정리 실행
+        window.db_autoPurgeOldTrash();
+    </script>
+</head>
+<body>
+
+    <!-- 헤더 -->
+    <header>
+        <div class="header-title-container">
+            <h1>🥩 으랏차 선입금 관리</h1>
+            <span class="sync-badge">📡 실시간 연동중</span>
+        </div>
+        <div class="font-scale-control" aria-label="글씨 크기 조절">
+            <span class="font-scale-label">글씨 크기</span>
+            <div class="font-scale-btns">
+                <button type="button" class="btn-font-scale" id="btnFontSm" onclick="setFontScale('sm')" title="글자 작게">A-</button>
+                <button type="button" class="btn-font-scale active" id="btnFontMd" onclick="setFontScale('md')" title="글자 보통">기본</button>
+                <button type="button" class="btn-font-scale" id="btnFontLg" onclick="setFontScale('lg')" title="글자 크게">A+</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 네비게이션 (3구분) -->
+    <nav class="main-nav">
+        <button type="button" class="nav-btn active" id="tabBtnNew" onclick="switchMainTab('new')">
+            <span class="nav-icon">📝</span>
+            <span class="nav-title">새 선입금</span>
+            <span class="nav-sub">손님 직접 입력</span>
+        </button>
+        <button type="button" class="nav-btn" id="tabBtnUse" onclick="switchMainTab('use')">
+            <span class="nav-icon">🍽️</span>
+            <span class="nav-title">선입금 사용</span>
+            <span class="nav-sub">조회 및 차감</span>
+        </button>
+        <button type="button" class="nav-btn" id="tabBtnAdmin" onclick="switchMainTab('admin')">
+            <span class="nav-icon">🔐</span>
+            <span class="nav-title">직원 관리용</span>
+            <span class="nav-sub">암호 보안 전용</span>
+        </button>
+    </nav>
+
+    <!-- ========================================================
+         1. 새 선입금 뷰 (손님 직접 입력 모드)
+         ======================================================== -->
+    <section class="view-section active" id="viewNew">
+        <div class="customer-card-box">
+            <div class="card-box-header">
+                <h2>선입금 정보 입력</h2>
+                <p>매장 방문 전 선입금 확인을 위해 정보를 입력해주세요.</p>
+            </div>
+            <form id="customerForm">
+                <div class="form-group">
+                    <label>성함 (입금자명) *</label>
+                    <input type="text" class="form-input" id="custName" placeholder="예: 홍길동" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label>연락처 *</label>
+                    <input type="tel" class="form-input" id="custPhone" placeholder="010-1234-5678" required>
+                </div>
+
+                <div class="form-group">
+                    <label>선입금액 (원) *</label>
+                    <input type="text" class="form-input" id="custAmount" placeholder="예: 50,000" required oninput="formatAmountInput(this)">
+                    <div class="amount-quick-buttons">
+                        <button type="button" class="quick-btn" onclick="addAmountInput(10000)">+1만</button>
+                        <button type="button" class="quick-btn" onclick="addAmountInput(30000)">+3만</button>
+                        <button type="button" class="quick-btn" onclick="addAmountInput(50000)">+5만</button>
+                        <button type="button" class="quick-btn" onclick="addAmountInput(100000)">+10만</button>
+                        <button type="button" class="quick-btn reset" onclick="resetAmountInput()">초기화</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>입금일자</label>
+                    <input type="date" class="form-input" id="custDepositDate">
+                </div>
+
+                <div class="form-group">
+                    <label>메모 / 요청사항 (선택)</label>
+                    <input type="text" class="form-input" id="custMemo" placeholder="특이사항이나 전달사항이 있으시면 적어주세요.">
+                </div>
+
+                <button type="submit" class="btn-submit-large" id="btnCustomerSubmit">선입금 등록 완료하기</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- ========================================================
+         2. 선입금 사용 뷰 (고객 검색 및 차감)
+         ======================================================== -->
+    <section class="view-section" id="viewUse">
+        <!-- 검색창 -->
+        <div class="search-container">
+            <div class="search-input-box">
+                <span class="search-icon-left">🔍</span>
+                <input type="text" id="useSearchInput" placeholder="고객명, 연락처(끝 4자리), 메모 검색" oninput="renderUseCards()">
+                <button type="button" class="search-clear-btn" onclick="clearUseSearch()">✕</button>
+            </div>
+        </div>
+
+        <div class="search-result-header">
+            <span id="useResultCountText">검색어를 입력하시면 고객 정보가 표시됩니다.</span>
+            <span id="useResultTotalText"></span>
+        </div>
+
+        <div class="use-cards-grid" id="useCardsGrid">
+            <!-- 검색 결과 카드 목록 -->
+        </div>
+    </section>
+
+    <!-- ========================================================
+         3. 직원 관리용 뷰 (보안 대시보드)
+         ======================================================== -->
+    <section class="view-section" id="viewAdmin">
+        <!-- 관리자 KPI -->
+        <div class="admin-kpi-grid">
+            <div class="admin-kpi-card" style="border-color: #ffc9c9; background: #fff5f5;">
+                <div class="admin-kpi-title">
+                    <span>보관 중 선입금</span>
+                    <span>🟡</span>
+                </div>
+                <div class="admin-kpi-val" id="adminKpiHoldingAmt" style="color: #ff4d4d;">0원</div>
+                <div class="admin-kpi-sub" id="adminKpiHoldingCnt">미사용 0건</div>
+            </div>
+            <div class="admin-kpi-card">
+                <div class="admin-kpi-title">
+                    <span>사용 완료 선입금</span>
+                    <span>🟢</span>
+                </div>
+                <div class="admin-kpi-val" id="adminKpiUsedAmt" style="color: #2b8a3e;">0원</div>
+                <div class="admin-kpi-sub" id="adminKpiUsedCnt">차감 완료 0건</div>
+            </div>
+        </div>
+
+        <!-- 관리자 검색창 -->
+        <div class="search-container" style="margin-bottom: 12px;">
+            <div class="search-input-box">
+                <span class="search-icon-left">🔍</span>
+                <input type="text" id="adminSearchInput" placeholder="고객명, 연락처(끝 4자리), 메모 검색" oninput="renderAdminDashboard()">
+                <button type="button" class="search-clear-btn" onclick="clearAdminSearch()">✕</button>
+            </div>
+        </div>
+
+        <!-- 툴바 -->
+        <div class="admin-toolbar">
+            <div class="admin-tab-group">
+                <button type="button" class="admin-filter-tab active" data-filter="all" onclick="setAdminFilter('all')">전체</button>
+                <button type="button" class="admin-filter-tab" data-filter="holding" onclick="setAdminFilter('holding')">🟡 보관중</button>
+                <button type="button" class="admin-filter-tab" data-filter="used" onclick="setAdminFilter('used')">🟢 사용완료</button>
+            </div>
+            <div class="admin-actions">
+                <button type="button" class="btn-admin-tool" onclick="openTrashModal()">🗑️ 휴지통</button>
+            </div>
+        </div>
+
+        <!-- 관리자 리스트 -->
+        <div class="admin-list" id="adminList">
+            <!-- 리스트 항목 -->
+        </div>
+    </section>
+
+    <!-- ========================================================
+         모달들
+         ======================================================== -->
+
+    <!-- 손님 등록 완료 모달 -->
+    <div class="modal-overlay" id="customerCompleteModal" style="display: none;">
+        <div class="modal-content" style="max-width: 380px;">
+            <div class="complete-modal-box">
+                <div class="complete-icon">🎉</div>
+                <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">선입금 등록 완료</h3>
+                <p style="font-size: 14.5px; color: #495057; line-height: 1.5; margin-bottom: 20px;">
+                    <strong id="modalCompleteCustName">고객</strong>님의 선입금 <strong id="modalCompleteCustAmt" style="color: #ff4d4d;">50,000원</strong>이 정상 등록되었습니다.<br>
+                    매장에서 뵙겠습니다. 감사합니다! 🥩
+                </p>
+                <button type="button" class="btn-submit-large" style="margin-top: 0; height: 46px;" onclick="closeCustomerCompleteModal()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 선입금 차감 완료 모달 (알림 팝업) -->
+    <div class="modal-overlay" id="deductCompleteModal" style="display: none;">
+        <div class="modal-content" style="max-width: 380px;">
+            <div class="complete-modal-box">
+                <div class="complete-icon">🍽️</div>
+                <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">선입금 차감 완료</h3>
+                <p style="font-size: 14.5px; color: #495057; line-height: 1.6; margin-bottom: 20px;">
+                    <strong id="modalDeductCustName">고객</strong>님의 선입금 <strong id="modalDeductAmt" style="color: #c92a2a;">0원</strong>이 정상 차감되었습니다.<br>
+                    현재 남은 잔액은 <strong id="modalDeductRemaining" style="color: #2b8a3e; font-size: 16px;">0원</strong>입니다.
+                </p>
+                <button type="button" class="btn-submit-large" style="margin-top: 0; height: 46px; background-color: #2b8a3e;" onclick="closeDeductCompleteModal()">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 공통 확인(Confirm) 커스텀 모달 (브라우저 confirm 차단 방지) -->
+    <div class="modal-overlay" id="customConfirmModal" style="display: none; z-index: 2500;">
+        <div class="modal-content" style="max-width: 360px; text-align: center; padding: 24px;">
+            <div style="font-size: 38px; margin-bottom: 8px;" id="customConfirmIcon">⚠️</div>
+            <h3 style="font-size: 18px; font-weight: 800; color: #212529; margin-bottom: 8px;" id="customConfirmTitle">확인</h3>
+            <p style="font-size: 14px; color: #495057; line-height: 1.6; margin-bottom: 20px; word-break: keep-all; white-space: pre-line;" id="customConfirmMessage">이 작업을 진행하시겠습니까?</p>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn-modal btn-modal-cancel" style="flex: 1;" onclick="handleCustomConfirm(false)">취소</button>
+                <button type="button" class="btn-modal btn-modal-submit" style="flex: 1.2;" id="customConfirmSubmitBtn" onclick="handleCustomConfirm(true)">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 선입금 사용 (차감 처리) 모달 -->
+    <div class="modal-overlay" id="useConfirmModal" style="display: none;">
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="modal-header">
+                <span>🍽️ 선입금 차감 처리</span>
+                <button type="button" class="modal-close-icon" onclick="closeUseModal()">✕</button>
+            </div>
+            <form id="useConfirmForm">
+                <input type="hidden" id="useTargetId">
+                <input type="hidden" id="useCurrentBalance">
+                
+                <div style="background: #f8f9fa; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; font-size: 14px; line-height: 1.7;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>고객 성함: <strong id="useModalName" style="font-size: 15.5px; color: #212529;">홍길동</strong></span>
+                        <span id="useModalPhone" style="color: #495057;">010-1234-5678</span>
+                    </div>
+                    <div style="margin-top: 6px; padding-top: 8px; border-top: 1px dashed #dee2e6; display: flex; justify-content: space-between; align-items: baseline;">
+                        <span style="color: #495057; font-weight: 600;">현재 보유 선입금 잔액:</span>
+                        <strong id="useModalAmount" style="color: #c92a2a; font-size: 18px;">50,000원</strong>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>차감할 금액 (원) *</label>
+                    <input type="text" class="form-input" id="useDeductAmount" placeholder="예: 50,000" required oninput="handleDeductAmountInput(this)">
+                    <div class="amount-quick-buttons" style="margin-top: 6px;">
+                        <button type="button" class="quick-btn" style="background:#e7f5ff; border-color:#a5d8ff; color:#1971c2; font-weight:800;" onclick="setFullDeduct()">전액차감</button>
+                        <button type="button" class="quick-btn" onclick="addDeductAmount(10000)">+1만</button>
+                        <button type="button" class="quick-btn" onclick="addDeductAmount(30000)">+3만</button>
+                        <button type="button" class="quick-btn" onclick="addDeductAmount(50000)">+5만</button>
+                        <button type="button" class="quick-btn" onclick="addDeductAmount(100000)">+10만</button>
+                        <button type="button" class="quick-btn reset" onclick="resetDeductAmount()">초기화</button>
+                    </div>
+                    <div id="useCalcNotice" style="margin-top: 6px; font-size: 12.5px; font-weight: 700; color: #2b8a3e;">
+                        차감 후 남은 잔액: <span id="useRemainingCalcText">0원</span>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>차감 일자 *</label>
+                    <input type="date" class="form-input" id="useDeductDate" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>차감 메모 (선택)</label>
+                    <input type="text" class="form-input" id="useNote" placeholder="예: 식사비 차감">
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-modal btn-modal-cancel" onclick="closeUseModal()">취소</button>
+                    <button type="submit" class="btn-modal btn-modal-submit" id="btnSubmitDeduct" style="background-color: #2b8a3e;">선입금 차감 완료</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 선입금 상세정보 모달 (직원 관리용) -->
+    <div class="modal-overlay" id="detailModal" style="display: none;">
+        <div class="modal-content" style="max-width: 460px;">
+            <div class="modal-header">
+                <span>📋 선입금 상세 내역</span>
+                <button type="button" class="modal-close-icon" onclick="closeDetailModal()">✕</button>
+            </div>
+            
+            <!-- 금융 요약 카드 -->
+            <div class="detail-summary-box">
+                <div class="detail-summary-card">
+                    <div class="detail-summary-label">처음 선입금</div>
+                    <div class="detail-summary-val" id="detailOriginalAmt">0원</div>
+                </div>
+                <div class="detail-summary-card">
+                    <div class="detail-summary-label">누적 차감액</div>
+                    <div class="detail-summary-val" id="detailUsedAmt" style="color: #2b8a3e;">0원</div>
+                </div>
+                <div class="detail-summary-card highlight">
+                    <div class="detail-summary-label" style="color: #c92a2a;">현재 남은 차액 (잔액)</div>
+                    <div class="detail-summary-val large" id="detailRemainingAmt">0원</div>
+                </div>
+            </div>
+
+            <!-- 상세 정보 목록 -->
+            <div class="detail-info-list">
+                <div class="detail-info-row">
+                    <span>성함 (입금자명)</span>
+                    <span id="detailCustName">-</span>
+                </div>
+                <div class="detail-info-row">
+                    <span>연락처</span>
+                    <span id="detailCustPhone">-</span>
+                </div>
+                <div class="detail-info-row">
+                    <span>최초 입금일자</span>
+                    <span id="detailDepositDate">-</span>
+                </div>
+                <div class="detail-info-row">
+                    <span>최근 사용(차감)일자</span>
+                    <span id="detailUsedDate">-</span>
+                </div>
+                <div class="detail-info-row">
+                    <span>상태</span>
+                    <span id="detailStatusBadge">-</span>
+                </div>
+                <div class="detail-info-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <span>고객 요청/등록 메모</span>
+                    <span id="detailCustMemo" style="color: #495057; font-weight: normal; word-break: break-all;">-</span>
+                </div>
+                <div class="detail-info-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <span>차감 사용 메모</span>
+                    <span id="detailUseNote" style="color: #2b8a3e; font-weight: normal; word-break: break-all;">-</span>
+                </div>
+            </div>
+
+            <!-- 차감 히스토리 -->
+            <div id="detailHistoryWrapper" style="margin-top: 10px;">
+                <div style="font-size: 13px; font-weight: 700; color: #495057; margin-bottom: 6px;">📜 차감 기록 히스토리</div>
+                <div class="detail-history-list" id="detailHistoryList">
+                    <!-- 히스토리 항목 -->
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button type="button" class="btn-modal btn-modal-cancel" style="width: 100%;" onclick="closeDetailModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 직원 전용 암호 입력 모달 -->
+    <div class="modal-overlay" id="pinModal" style="display: none;">
+        <div class="pin-modal-content">
+            <div class="pin-icon">🔐</div>
+            <h3 style="font-size: 20px; font-weight: 800; color: #111;">직원 인증</h3>
+            <p style="font-size: 13.5px; color: #868e96; margin-top: 4px;">관리자 전용 비밀번호를 입력해주세요.</p>
+            <div>
+                <input type="text" class="pin-input" id="pinInput" maxlength="8" placeholder="••••" autocomplete="off" inputmode="numeric" onkeydown="if(event.key==='Enter')submitPin();">
+                <div class="pin-error" id="pinError"></div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn-modal btn-modal-cancel" style="flex: 1;" onclick="cancelPinModal()">취소</button>
+                    <button type="button" class="btn-modal btn-modal-submit" style="flex: 1.5;" onclick="submitPin()">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 휴지통 모달 -->
+    <div class="modal-overlay" id="trashModal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; min-height: 380px; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <span>🗑️ 선입금 휴지통</span>
+                <button type="button" class="modal-close-icon" onclick="closeTrashModal()">✕</button>
+            </div>
+            <div id="trashList" style="flex: 1; overflow-y: auto; max-height: 360px; padding-right: 4px;">
+                <div style="text-align: center; color: #868e96; padding: 40px 0;">로딩 중...</div>
+            </div>
+            <div class="modal-buttons" style="justify-content: space-between;">
+                <button type="button" class="btn-modal" style="background: #fff; color: #fa5252; border: 1px solid #ffc9c9;" onclick="emptyAllTrash()">🗑️ 휴지통 전체 비우기</button>
+                <button type="button" class="btn-modal btn-modal-cancel" onclick="closeTrashModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 토스트 -->
+    <div class="toast" id="toast">알림 메시지</div>
+
+    <!-- 클라이언트 상호작용 스크립트 -->
+    <script>
+        let currentTab = 'new';
+        let isAdminUnlocked = false;
+        let adminPin = localStorage.getItem('uratcha_admin_pin') || '1234';
+        let currentAdminFilter = 'all';
+
+        // ------------------ 글씨 크기 조절 기능 ------------------
+        window.setFontScale = function(scale) {
+            const validScales = ['sm', 'md', 'lg'];
+            if (!validScales.includes(scale)) scale = 'md';
+            
+            document.documentElement.classList.remove('font-sm', 'font-md', 'font-lg');
+            document.documentElement.classList.add(`font-${scale}`);
+            try {
+                localStorage.setItem('uratcha_font_scale', scale);
+            } catch (e) {}
+
+            document.querySelectorAll('.btn-font-scale').forEach(btn => btn.classList.remove('active'));
+            const activeId = scale === 'sm' ? 'btnFontSm' : scale === 'lg' ? 'btnFontLg' : 'btnFontMd';
+            const activeBtn = document.getElementById(activeId);
+            if (activeBtn) activeBtn.classList.add('active');
+        };
+
+        // 초기 저장된 글씨 크기 적용
+        try {
+            const savedScale = localStorage.getItem('uratcha_font_scale') || 'md';
+            window.setFontScale(savedScale);
+        } catch (e) {}
+
+        // 탭 전환
+        window.switchMainTab = function(tabName) {
+            // 새선입금이나 선입금 사용으로 넘어가면 관리자 인증 자동 해제 (다시 직원관리용 누르면 암호 재입력)
+            if (tabName !== 'admin') {
+                isAdminUnlocked = false;
+            } else if (!isAdminUnlocked) {
+                openPinModal();
+                return;
+            }
+
+            currentTab = tabName;
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+
+            if (tabName === 'new') {
+                document.getElementById('tabBtnNew').classList.add('active');
+                document.getElementById('viewNew').classList.add('active');
+                document.getElementById('custName').focus();
+            } else if (tabName === 'use') {
+                document.getElementById('tabBtnUse').classList.add('active');
+                document.getElementById('viewUse').classList.add('active');
+                document.getElementById('useSearchInput').focus();
+                renderUseCards();
+            } else if (tabName === 'admin') {
+                document.getElementById('tabBtnAdmin').classList.add('active');
+                document.getElementById('viewAdmin').classList.add('active');
+                renderAdminDashboard();
+            }
+        };
+
+        // 데이터 로드 콜백
+        window.onPrepaymentDataLoaded = function() {
+            if (currentTab === 'use') renderUseCards();
+            if (currentTab === 'admin') renderAdminDashboard();
+        };
+
+        // 로컬 날짜 YYYY-MM-DD
+        function getTodayStr() {
+            const now = new Date();
+            return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        }
+        document.getElementById('custDepositDate').value = getTodayStr();
+
+        // 전화번호 자동 하이픈
+        function attachPhoneAutoHyphen(inputEl) {
+            inputEl.addEventListener('input', function(e) {
+                let raw = this.value.replace(/[^0-9]/g, '');
+                let formatted = '';
+                if (raw.length < 4) {
+                    formatted = raw;
+                    if (raw.length === 3 && e.inputType !== 'deleteContentBackward') formatted += '-';
+                } else if (raw.length < 7) {
+                    formatted = raw.substring(0, 3) + '-' + raw.substring(3);
+                } else if (raw.length === 7) {
+                    formatted = raw.substring(0, 3) + '-' + raw.substring(3, 7);
+                    if (e.inputType !== 'deleteContentBackward') formatted += '-';
+                } else {
+                    formatted = raw.substring(0, 3) + '-' + raw.substring(3, 7) + '-' + raw.substring(7, 11);
+                }
+                this.value = formatted;
+            });
+        }
+        attachPhoneAutoHyphen(document.getElementById('custPhone'));
+
+        // 금액 콤마
+        function formatAmountInput(input) {
+            let num = input.value.replace(/[^0-9]/g, '');
+            input.value = num ? Number(num).toLocaleString('ko-KR') : '';
+        }
+
+        function addAmountInput(delta) {
+            const el = document.getElementById('custAmount');
+            let cur = parseInt(el.value.replace(/[^0-9]/g, '')) || 0;
+            cur += delta;
+            el.value = cur.toLocaleString('ko-KR');
+        }
+
+        function resetAmountInput() {
+            document.getElementById('custAmount').value = '';
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2600);
+        }
+
+        /* ========================================================
+           1. 새 선입금 등록 (손님 입력)
+           ======================================================== */
+        document.getElementById('customerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnCustomerSubmit');
+            const name = document.getElementById('custName').value.trim();
+            const phone = document.getElementById('custPhone').value.trim();
+            const amountNum = parseInt(document.getElementById('custAmount').value.replace(/[^0-9]/g, '')) || 0;
+            const depositDate = document.getElementById('custDepositDate').value || getTodayStr();
+            const memo = document.getElementById('custMemo').value.trim();
+
+            if (!name || !phone || !amountNum) {
+                alert('성함, 연락처, 선입금액을 정확히 입력해주세요.');
+                return;
+            }
+
+            // 중복 검사: 이름이나 번호 둘 중에 하나라도 같은 항목이 있는지 확인
+            const cleanPhone = phone.replace(/[^0-9]/g, '');
+            const existingList = window.prepayments || [];
+            const duplicate = existingList.find(p => {
+                const pName = (p.name || '').trim().toLowerCase();
+                const pPhone = (p.phone || '').replace(/[^0-9]/g, '');
+                const isSameName = pName && (pName === name.toLowerCase());
+                const isSamePhone = cleanPhone && pPhone && (cleanPhone === pPhone);
+                return isSameName || isSamePhone;
+            });
+
+            const proceedSave = async () => {
+                btn.disabled = true;
+                btn.innerText = '등록 중...';
+
+                const payload = {
+                    name: name,
+                    phone: phone,
+                    amount: amountNum,
+                    originalAmount: amountNum,
+                    usedAmount: 0,
+                    remainingAmount: amountNum,
+                    depositDate: depositDate,
+                    status: 'holding', // 기본 상태는 보관중
+                    memo: memo,
+                    useHistory: [],
+                    createdAt: new Date().toISOString()
+                };
+
+                try {
+                    await window.db_add(payload);
+
+                    // 완료 모달 띄우기
+                    document.getElementById('modalCompleteCustName').innerText = name;
+                    document.getElementById('modalCompleteCustAmt').innerText = amountNum.toLocaleString() + '원';
+                    document.getElementById('customerCompleteModal').style.display = 'flex';
+
+                    // 폼 리셋
+                    document.getElementById('customerForm').reset();
+                    document.getElementById('custDepositDate').value = getTodayStr();
+                } catch (err) {
+                    console.error("등록 실패:", err);
+                    alert('등록 중 오류가 발생했습니다: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = '선입금 등록 완료하기';
+                }
+            };
+
+            // 등록 전 재확인 팝업
+            const confirmMessage = duplicate
+                ? `⚠️ [${name}] / [${phone}] 연락처 또는 성함으로 이미 등록된 선입금 내역이 있습니다.\n\n그래도 새 선입금 (${amountNum.toLocaleString()}원)을 등록하시겠습니까?\n다시 한번 이 행동을 진행하시겠습니까?`
+                : `[${name}]님의 선입금 ${amountNum.toLocaleString()}원을 등록하시겠습니까?\n\n다시 한번 이 행동을 진행하시겠습니까?`;
+
+            showConfirmDialog({
+                title: duplicate ? '중복 선입금 등록 확인' : '선입금 등록 확인',
+                message: confirmMessage,
+                icon: duplicate ? '⚠️' : '📝',
+                confirmText: '등록 진행',
+                isDanger: false,
+                onConfirm: async () => {
+                    await proceedSave();
+                }
+            });
+        });
+
+        window.closeCustomerCompleteModal = function() {
+            document.getElementById('customerCompleteModal').style.display = 'none';
+            document.getElementById('custName').focus();
+        };
+
+        /* ========================================================
+           2. 선입금 사용 (고객 검색 및 차감)
+           ======================================================== */
+        window.clearUseSearch = function() {
+            document.getElementById('useSearchInput').value = '';
+            renderUseCards();
+            document.getElementById('useSearchInput').focus();
+        };
+
+        window.renderUseCards = function() {
+            const kw = document.getElementById('useSearchInput').value.trim().toLowerCase();
+            const grid = document.getElementById('useCardsGrid');
+            const countText = document.getElementById('useResultCountText');
+            const totalText = document.getElementById('useResultTotalText');
+            const items = window.prepayments || [];
+
+            // 검색어가 없을 때는 정보를 띄우지 않고 검색 안내만 표시
+            if (!kw) {
+                countText.innerText = '고객명 또는 전화번호 뒤 4자리를 검색해주세요.';
+                totalText.innerText = '';
+                grid.innerHTML = `
+                    <div class="empty-state" style="padding: 70px 20px;">
+                        <div class="empty-state-icon" style="font-size: 46px; margin-bottom: 8px;">🔍</div>
+                        <div class="empty-state-title" style="font-size: 17px;">고객을 검색해주세요</div>
+                        <div style="font-size: 13.5px; color: #868e96; margin-top: 4px;">상단 검색창에 성함 또는 연락처 뒤 4자리를 입력하시면 선입금 내역이 조회됩니다.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const cleanKw = kw.replace(/[^0-9a-zA-Z가-힣]/g, '');
+            let filtered = items.filter(p => {
+                const name = (p.name || '').toLowerCase();
+                const phone = (p.phone || '').replace(/[^0-9]/g, '');
+                const memo = (p.memo || '').toLowerCase();
+                return name.includes(kw) || phone.includes(cleanKw) || memo.includes(kw);
+            });
+
+            // 정렬: 보관중이 먼저, 입금일 최신순
+            filtered.sort((a, b) => {
+                if (a.status === 'holding' && b.status !== 'holding') return -1;
+                if (a.status !== 'holding' && b.status === 'holding') return 1;
+                return (b.depositDate || '').localeCompare(a.depositDate || '') || (b.createdAt || '').localeCompare(a.createdAt || '');
+            });
+
+            countText.innerText = `검색 결과: 총 ${filtered.length}건`;
+
+            const holdingSum = filtered.filter(p => p.status === 'holding').reduce((s, p) => s + (parseInt(p.amount) || 0), 0);
+            totalText.innerText = holdingSum > 0 ? `보관중 잔액 합계: ${holdingSum.toLocaleString()}원` : '';
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🍃</div>
+                        <div class="empty-state-title">일치하는 선입금 내역이 없습니다.</div>
+                        <div style="font-size: 13px;">고객 성함이나 전화번호 뒤 4자리로 다시 검색해보세요.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(p => {
+                const remaining = Number(p.amount || 0);
+                const used = Number(p.usedAmount || 0);
+                const orig = (p.originalAmount !== undefined) ? Number(p.originalAmount) : (remaining + used);
+                const isHolding = (p.status === 'holding' && remaining > 0);
+                const amtFormatted = remaining.toLocaleString();
+
+                let statusBadge = '';
+                if (remaining === 0 || p.status === 'used') {
+                    statusBadge = '<span class="badge used">🟢 전액 사용완료</span>';
+                } else if (used > 0) {
+                    statusBadge = '<span class="badge holding" style="background:#fff3bf; color:#d9480f;">🟠 부분사용 (잔액있음)</span>';
+                } else {
+                    statusBadge = '<span class="badge holding">🟡 보관중 (사용가능)</span>';
+                }
+
+                html += `
+                    <div class="use-card" id="use-card-${p.id}">
+                        <div class="use-card-top">
+                            ${statusBadge}
+                            <span style="font-size: 12px; color: #868e96;">입금일: ${p.depositDate || '-'}</span>
+                        </div>
+
+                        <div class="use-card-main">
+                            <div class="use-card-cust">
+                                <div class="use-cust-name">${p.name}</div>
+                                <div class="use-cust-phone">📱 ${p.phone || '-'}</div>
+                            </div>
+                            <div class="use-card-amount-box">
+                                <div class="use-amount-label">${used > 0 ? '남은 잔액' : '선입금액'}</div>
+                                <div class="use-amount-val">${amtFormatted}원</div>
+                                ${used > 0 ? `<div style="font-size: 11px; color: #868e96; margin-top: 2px;">처음: ${orig.toLocaleString()}원</div>` : ''}
+                            </div>
+                        </div>
+
+                        ${p.memo ? `
+                        <div style="background: #f8f9fa; border-radius: 6px; padding: 6px 10px; font-size: 12.5px; color: #495057;">
+                            📝 ${p.memo}
+                        </div>` : ''}
+
+                        ${p.useNote ? `
+                        <div style="background: #ebfbee; border-left: 3px solid #40c057; border-radius: 4px; padding: 6px 10px; font-size: 12.5px; color: #2b8a3e; font-weight: 600;">
+                            ✓ 최근차감: ${p.useNote}
+                        </div>` : ''}
+
+                        <div>
+                            ${remaining > 0 ? `
+                            <button type="button" class="btn-use-action ready" style="width: 100%;" onclick="openUseModal('${p.id}')">
+                                🍽️ 선입금 차감하기 (잔액: ${amtFormatted}원)
+                            </button>` : `
+                            <div class="btn-use-action done" style="width: 100%;">
+                                ✓ 전액 사용 완료된 선입금입니다
+                            </div>`}
+                        </div>
+                    </div>
+                `;
+            });
+
+            grid.innerHTML = html;
+        };
+
+        // 차감 금액 실시간 계산 및 검증
+        function handleDeductAmountInput(input) {
+            let num = input.value.replace(/[^0-9]/g, '');
+            input.value = num ? Number(num).toLocaleString('ko-KR') : '';
+            updateRemainingCalc(Number(num) || 0);
+        }
+
+        function updateRemainingCalc(deductAmt) {
+            const curBalance = Number(document.getElementById('useCurrentBalance').value || 0);
+            const remaining = curBalance - deductAmt;
+            const noticeEl = document.getElementById('useCalcNotice');
+            const btnSubmit = document.getElementById('btnSubmitDeduct');
+
+            if (deductAmt > curBalance) {
+                noticeEl.style.color = '#fa5252';
+                noticeEl.innerHTML = `⚠️ 차감 금액이 잔액(${curBalance.toLocaleString()}원)을 초과합니다!`;
+                btnSubmit.disabled = true;
+                btnSubmit.style.opacity = '0.5';
+            } else if (deductAmt <= 0) {
+                noticeEl.style.color = '#868e96';
+                noticeEl.innerHTML = `차감할 금액을 입력해주세요. (현재 잔액: ${curBalance.toLocaleString()}원)`;
+                btnSubmit.disabled = true;
+                btnSubmit.style.opacity = '0.5';
+            } else {
+                noticeEl.style.color = '#2b8a3e';
+                noticeEl.innerHTML = `차감 후 남은 잔액: <strong>${remaining.toLocaleString()}원</strong> ${remaining === 0 ? '(전액 사용 완료)' : ''}`;
+                btnSubmit.disabled = false;
+                btnSubmit.style.opacity = '1';
+            }
+        }
+
+        window.setFullDeduct = function() {
+            const curBalance = Number(document.getElementById('useCurrentBalance').value || 0);
+            document.getElementById('useDeductAmount').value = curBalance.toLocaleString('ko-KR');
+            updateRemainingCalc(curBalance);
+        };
+
+        window.addDeductAmount = function(delta) {
+            const curBalance = Number(document.getElementById('useCurrentBalance').value || 0);
+            const el = document.getElementById('useDeductAmount');
+            let cur = parseInt(el.value.replace(/[^0-9]/g, '')) || 0;
+            cur = Math.min(curBalance, cur + delta);
+            el.value = cur.toLocaleString('ko-KR');
+            updateRemainingCalc(cur);
+        };
+
+        window.resetDeductAmount = function() {
+            document.getElementById('useDeductAmount').value = '';
+            updateRemainingCalc(0);
+        };
+
+        // 사용 (차감) 모달 열기
+        window.openUseModal = function(id) {
+            const p = window.prepayments.find(item => item.id === id);
+            if (!p) return;
+
+            const remaining = Number(p.amount || 0);
+            document.getElementById('useTargetId').value = p.id;
+            document.getElementById('useCurrentBalance').value = remaining;
+            document.getElementById('useModalName').innerText = p.name;
+            document.getElementById('useModalPhone').innerText = p.phone || '-';
+            document.getElementById('useModalAmount').innerText = remaining.toLocaleString() + '원';
+            
+            // 차감할 금액은 기본 빈칸으로 두어 직접 입력할 수 있게 처리
+            document.getElementById('useDeductAmount').value = '';
+            // 오늘 날짜로 자동 세팅
+            document.getElementById('useDeductDate').value = getTodayStr();
+            document.getElementById('useNote').value = '';
+
+            updateRemainingCalc(0);
+            document.getElementById('useConfirmModal').style.display = 'flex';
+        };
+
+        window.closeUseModal = function() {
+            document.getElementById('useConfirmModal').style.display = 'none';
+        };
+
+        // 손님 차감 완료 팝업 닫기
+        window.closeDeductCompleteModal = function() {
+            document.getElementById('deductCompleteModal').style.display = 'none';
+        };
+
+        // 공통 커스텀 Confirm 대화상자 함수 (브라우저 window.confirm 차단 문제 방지)
+        let pendingConfirmCallback = null;
+        window.showConfirmDialog = function({ title, message, icon = '⚠️', confirmText = '확인', isDanger = false, onConfirm }) {
+            document.getElementById('customConfirmIcon').innerText = icon;
+            document.getElementById('customConfirmTitle').innerText = title;
+            document.getElementById('customConfirmMessage').innerText = message;
+            const btn = document.getElementById('customConfirmSubmitBtn');
+            btn.innerText = confirmText;
+            btn.style.backgroundColor = isDanger ? '#fa5252' : '#2b8a3e';
+            pendingConfirmCallback = onConfirm;
+            document.getElementById('customConfirmModal').style.display = 'flex';
+        };
+
+        window.handleCustomConfirm = function(isConfirmed) {
+            document.getElementById('customConfirmModal').style.display = 'none';
+            if (isConfirmed && typeof pendingConfirmCallback === 'function') {
+                const cb = pendingConfirmCallback;
+                pendingConfirmCallback = null;
+                cb();
+            } else {
+                pendingConfirmCallback = null;
+            }
+        };
+
+        // 선입금 차감 폼 제출 (확인 팝업 거친 후 실행)
+        document.getElementById('useConfirmForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('useTargetId').value;
+            if (!id) return;
+
+            const p = window.prepayments.find(item => item.id === id);
+            const custName = p ? p.name : '고객';
+
+            const deductAmt = parseInt(document.getElementById('useDeductAmount').value.replace(/[^0-9]/g, '')) || 0;
+            const deductDate = document.getElementById('useDeductDate').value || getTodayStr();
+            const note = document.getElementById('useNote').value.trim();
+            const curBalance = Number(document.getElementById('useCurrentBalance').value || 0);
+            const remaining = curBalance - deductAmt;
+
+            const proceedDeduct = async () => {
+                const btn = document.getElementById('btnSubmitDeduct');
+                btn.disabled = true;
+                btn.innerText = '차감 처리 중...';
+
+                try {
+                    const res = await window.db_deductPrepayment(id, deductAmt, deductDate, note);
+                    closeUseModal();
+                    
+                    // 차감 완료 팝업 모달 띄우기
+                    document.getElementById('modalDeductCustName').innerText = custName;
+                    document.getElementById('modalDeductAmt').innerText = deductAmt.toLocaleString() + '원';
+                    document.getElementById('modalDeductRemaining').innerText = res.remainingAmount.toLocaleString() + '원';
+                    document.getElementById('deductCompleteModal').style.display = 'flex';
+
+                    renderUseCards();
+                } catch (err) {
+                    alert('차감 처리 실패: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = '선입금 차감 완료';
+                }
+            };
+
+            // 차감 전 재확인 팝업
+            showConfirmDialog({
+                title: '선입금 차감 확인',
+                message: `[${custName}]님의 선입금에서 ${deductAmt.toLocaleString()}원을 차감하시겠습니까?\n(차감 후 남은 잔액: ${remaining.toLocaleString()}원)\n\n다시 한번 이 행동을 진행하시겠습니까?`,
+                icon: '🍽️',
+                confirmText: '차감 진행',
+                isDanger: false,
+                onConfirm: async () => {
+                    await proceedDeduct();
+                }
+            });
+        });
+
+        /* ========================================================
+           3. 직원 관리용 (보안 대시보드)
+           ======================================================== */
+        function openPinModal() {
+            document.getElementById('pinInput').value = '';
+            document.getElementById('pinError').innerText = '';
+            document.getElementById('pinModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('pinInput').focus(), 100);
+        }
+
+        window.cancelPinModal = function() {
+            document.getElementById('pinModal').style.display = 'none';
+            // 이전 탭으로 유지
+            switchMainTab(currentTab === 'admin' ? 'new' : currentTab);
+        };
+
+        window.submitPin = function() {
+            const entered = document.getElementById('pinInput').value.trim();
+            if (entered === adminPin) {
+                isAdminUnlocked = true;
+                document.getElementById('pinModal').style.display = 'none';
+                switchMainTab('admin');
+                showToast('직원 관리자 모드가 활성화되었습니다.');
+            } else {
+                document.getElementById('pinError').innerText = '암호가 올바르지 않습니다.';
+                document.getElementById('pinInput').select();
+            }
+        };
+
+        // 관리자 검색 초기화
+        window.clearAdminSearch = function() {
+            const searchInput = document.getElementById('adminSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                renderAdminDashboard();
+                searchInput.focus();
+            }
+        };
+
+        window.setAdminFilter = function(filter) {
+            currentAdminFilter = filter;
+            document.querySelectorAll('.admin-filter-tab').forEach(t => {
+                if (t.getAttribute('data-filter') === filter) t.classList.add('active');
+                else t.classList.remove('active');
+            });
+            renderAdminDashboard();
+        };
+
+        // 고객 성함 정렬 함수: 한글(가나다 순) -> 영어(ABC 순, 대소문자 무시) -> 기타(숫자/기호)
+        function compareCustomerNames(aName, bName) {
+            const nameA = (aName || '').trim();
+            const nameB = (bName || '').trim();
+
+            if (!nameA && !nameB) return 0;
+            if (!nameA) return 1;
+            if (!nameB) return -1;
+
+            function getPriority(str) {
+                const firstChar = str.charAt(0);
+                if (/[가-힣ㄱ-ㅎ]/.test(firstChar)) return 1; // 1순위: 한글 (가나다 순)
+                if (/[a-zA-Z]/.test(firstChar)) return 2;   // 2순위: 영어 (ABC 순)
+                return 3;                                  // 3순위: 숫자 및 기타 특수문자
+            }
+
+            const prioA = getPriority(nameA);
+            const prioB = getPriority(nameB);
+
+            if (prioA !== prioB) {
+                return prioA - prioB;
+            }
+
+            // 동일 카테고리 내에서는 한국어/영어 대소문자 무시 로케일 정렬
+            return nameA.localeCompare(nameB, 'ko-KR', { sensitivity: 'base', numeric: true });
+        }
+
+        window.renderAdminDashboard = function() {
+            const items = window.prepayments || [];
+
+            let holdingSum = 0, holdingCount = 0;
+            let usedSum = 0, usedCount = 0;
+
+            items.forEach(p => {
+                const amt = parseInt(p.amount) || 0;
+                if (p.status === 'holding') {
+                    holdingSum += amt;
+                    holdingCount++;
+                } else if (p.status === 'used') {
+                    usedSum += amt;
+                    usedCount++;
+                }
+            });
+
+            document.getElementById('adminKpiHoldingAmt').innerText = holdingSum.toLocaleString() + '원';
+            document.getElementById('adminKpiHoldingCnt').innerText = `미사용 ${holdingCount}건`;
+            document.getElementById('adminKpiUsedAmt').innerText = usedSum.toLocaleString() + '원';
+            document.getElementById('adminKpiUsedCnt').innerText = `차감 완료 ${usedCount}건`;
+
+            let filtered = items;
+            if (currentAdminFilter !== 'all') {
+                filtered = items.filter(p => p.status === currentAdminFilter);
+            }
+
+            // 검색어 실시간 필터링
+            const kw = (document.getElementById('adminSearchInput')?.value || '').trim().toLowerCase();
+            if (kw) {
+                const cleanKw = kw.replace(/[^0-9a-zA-Z가-힣]/g, '');
+                filtered = filtered.filter(p => {
+                    const name = (p.name || '').toLowerCase();
+                    const phone = (p.phone || '').replace(/[^0-9]/g, '');
+                    const memo = (p.memo || '').toLowerCase();
+                    return name.includes(kw) || phone.includes(cleanKw) || memo.includes(kw);
+                });
+            }
+
+            // 정렬: 이름 가나다 순 -> 영어 ABC 순 -> 기타(숫자/기호) 순, 이름 같으면 최신 입금일순
+            filtered.sort((a, b) => {
+                const nameComp = compareCustomerNames(a.name, b.name);
+                if (nameComp !== 0) return nameComp;
+                return (b.depositDate || '').localeCompare(a.depositDate || '') || (b.createdAt || '').localeCompare(a.createdAt || '');
+            });
+
+            const listEl = document.getElementById('adminList');
+            if (filtered.length === 0) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🍃</div>
+                        <div class="empty-state-title">선입금 내역이 없습니다.</div>
+                        ${kw ? '<div style="font-size: 13px;">검색어와 일치하는 결과가 없습니다.</div>' : ''}
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(p => {
+                const remaining = Number(p.amount || 0);
+                const used = Number(p.usedAmount || 0);
+                const isUsedAll = (p.status === 'used' || remaining === 0);
+                const isPartial = (!isUsedAll && used > 0);
+
+                let badgeHtml = '';
+                if (isUsedAll) {
+                    badgeHtml = '<span class="badge used">🟢 전액사용</span>';
+                } else if (isPartial) {
+                    badgeHtml = '<span class="badge holding" style="background:#fff3bf; color:#d9480f;">🟠 부분사용</span>';
+                } else {
+                    badgeHtml = '<span class="badge holding">🟡 보관중</span>';
+                }
+
+                html += `
+                    <div class="admin-item-card">
+                        <div class="admin-item-left" style="cursor: pointer;" onclick="openDetailModal('${p.id}')">
+                            <div class="admin-item-title">
+                                <span>${p.name}</span>
+                                ${badgeHtml}
+                            </div>
+                            <div class="admin-item-meta">
+                                <span>📱 ${p.phone || '-'}</span>
+                                <span>📅 입금: ${p.depositDate || '-'}</span>
+                                ${p.memo ? `<span>📝 ${p.memo}</span>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="admin-item-right">
+                            <div class="admin-item-amount">${remaining.toLocaleString()}원</div>
+                            <div class="admin-item-btns">
+                                <button type="button" class="btn-mini info" onclick="openDetailModal('${p.id}')">상세정보</button>
+                                <button type="button" class="btn-mini danger" onclick="adminDelete('${p.id}')">삭제</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            listEl.innerHTML = html;
+        };
+
+        // 상세정보 모달 열기
+        window.openDetailModal = function(id) {
+            window.currentDetailId = id;
+            const p = (window.prepayments || []).find(item => item.id === id);
+            if (!p) return;
+
+            const remaining = Number(p.amount || 0);
+            const used = Number(p.usedAmount || 0);
+            const orig = (p.originalAmount !== undefined) ? Number(p.originalAmount) : (remaining + used);
+
+            document.getElementById('detailOriginalAmt').innerText = orig.toLocaleString() + '원';
+            document.getElementById('detailUsedAmt').innerText = used.toLocaleString() + '원';
+            document.getElementById('detailRemainingAmt').innerText = remaining.toLocaleString() + '원';
+
+            document.getElementById('detailCustName').innerText = p.name || '-';
+            document.getElementById('detailCustPhone').innerText = p.phone || '-';
+            document.getElementById('detailDepositDate').innerText = p.depositDate || '-';
+            document.getElementById('detailUsedDate').innerText = p.usedDate || (p.usedAt ? p.usedAt.substring(0, 10) : '미사용');
+
+            const isUsedAll = (p.status === 'used' || remaining === 0);
+            const isPartial = (!isUsedAll && used > 0);
+            let statusText = '🟡 보관중 (미사용)';
+            if (isUsedAll) statusText = '🟢 전액 사용완료';
+            else if (isPartial) statusText = '🟠 부분 사용 (잔액 남음)';
+            document.getElementById('detailStatusBadge').innerText = statusText;
+
+            document.getElementById('detailCustMemo').innerText = p.memo || '등록된 요청사항 없음';
+            document.getElementById('detailUseNote').innerText = p.useNote || '차감 메모 없음';
+
+            // 차감 기록 히스토리 바인딩 (되돌리기 버튼 포함)
+            const histListEl = document.getElementById('detailHistoryList');
+            const history = Array.isArray(p.useHistory) ? p.useHistory : [];
+            if (history.length === 0) {
+                histListEl.innerHTML = `
+                    <div style="text-align: center; color: #adb5bd; padding: 14px 0; font-size: 12.5px;">
+                        차감된 기록이 없습니다.
+                    </div>
+                `;
+            } else {
+                let hHtml = '';
+                history.forEach((h, idx) => {
+                    const hAmt = Number(h.amount || 0);
+                    const hRem = Number(h.remaining || 0);
+                    hHtml += `
+                        <div class="detail-history-item">
+                            <div>
+                                <strong style="color: #c92a2a;">-${hAmt.toLocaleString()}원</strong>
+                                <span style="color: #868e96; margin-left: 6px;">[${h.date || '-'}]</span>
+                                ${h.note ? `<div style="font-size: 11.5px; color: #495057; margin-top: 2px;">${h.note}</div>` : ''}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 11.5px; color: #868e96;">잔액: ${hRem.toLocaleString()}원</span>
+                                <button type="button" class="btn-mini danger" style="padding: 3px 8px; font-size: 11px;" onclick="revertDeductItem('${p.id}', ${idx})">되돌리기</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                histListEl.innerHTML = hHtml;
+            }
+
+            document.getElementById('detailModal').style.display = 'flex';
+        };
+
+        window.closeDetailModal = function() {
+            document.getElementById('detailModal').style.display = 'none';
+        };
+
+        // 차감 내역 되돌리기 (취소) - 커스텀 모달로 확실하게 실행
+        window.revertDeductItem = function(id, historyIndex) {
+            const p = (window.prepayments || []).find(item => item.id === id);
+            const history = Array.isArray(p?.useHistory) ? p.useHistory : [];
+            const item = history[historyIndex];
+            if (!item) return;
+
+            const amt = Number(item.amount || 0);
+            showConfirmDialog({
+                title: '차감 내역 되돌리기',
+                message: `[${item.date || ''}] ${amt.toLocaleString()}원 차감 내역을 취소하고 선입금 잔액으로 되돌리시겠습니까?\n\n다시 한번 이 행동을 진행하시겠습니까?`,
+                icon: '🔄',
+                confirmText: '되돌리기 진행',
+                isDanger: false,
+                onConfirm: async () => {
+                    try {
+                        const res = await window.db_revertDeduct(id, historyIndex);
+                        showToast(`${res.revertAmt.toLocaleString()}원이 성공적으로 잔액으로 복원되었습니다.`);
+                        openDetailModal(id);
+                        renderAdminDashboard();
+                    } catch (err) {
+                        console.error("차감 되돌리기 실패:", err);
+                        alert("되돌리기 실패: " + err.message);
+                    }
+                }
+            });
+        };
+
+        // 안전한 선입금 내역 삭제 (휴지통 이동) - 커스텀 모달로 확실하게 실행
+        window.adminDelete = function(id) {
+            const target = (window.prepayments || []).find(item => item.id === id);
+            const targetName = target?.name ? `[${target.name}]님의 ` : '';
+            showConfirmDialog({
+                title: '선입금 내역 삭제',
+                message: `${targetName}선입금 내역을 휴지통으로 이동하시겠습니까?\n\n다시 한번 이 행동을 진행하시겠습니까?`,
+                icon: '🗑️',
+                confirmText: '휴지통 이동',
+                isDanger: true,
+                onConfirm: async () => {
+                    try {
+                        await window.db_moveToTrash(id);
+                        showToast('휴지통으로 안전하게 이동되었습니다.');
+                        window.prepayments = (window.prepayments || []).filter(p => p.id !== id);
+                        renderAdminDashboard();
+                    } catch (err) {
+                        console.error("삭제 실패:", err);
+                        alert('삭제 중 오류가 발생했습니다: ' + err.message);
+                    }
+                }
+            });
+        };
+
+        // 휴지통
+        window.openTrashModal = async function() {
+            document.getElementById('trashModal').style.display = 'flex';
+            await loadTrashList();
+        };
+
+        window.closeTrashModal = function() {
+            document.getElementById('trashModal').style.display = 'none';
+        };
+
+        async function loadTrashList() {
+            const el = document.getElementById('trashList');
+            el.innerHTML = '<div style="text-align: center; color: #868e96; padding: 40px 0;">로딩 중...</div>';
+            try {
+                const list = await window.db_getTrashList();
+                if (list.length === 0) {
+                    el.innerHTML = `
+                        <div style="text-align: center; color: #868e96; padding: 50px 0;">
+                            <div style="font-size: 36px; margin-bottom: 8px;">🍃</div>
+                            <div>휴지통이 비어있습니다.</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                list.forEach(item => {
+                    const amt = Number(item.amount || 0).toLocaleString();
+                    html += `
+                        <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="font-size: 14.5px;">${item.name} (${amt}원)</strong>
+                                <div style="font-size: 11.5px; color: #868e96; margin-top: 2px;">
+                                    ${item.phone || '-'} | 입금: ${item.depositDate || '-'}
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 4px;">
+                                <button type="button" class="btn-mini" style="background: #2b8a3e; color: #fff;" onclick="restoreTrash('${item.id}')">복구</button>
+                                <button type="button" class="btn-mini danger" onclick="permDeleteTrash('${item.id}')">영구삭제</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                el.innerHTML = html;
+            } catch (e) {
+                el.innerHTML = '<div style="color: #fa5252; padding: 20px; text-align: center;">휴지통을 불러오지 못했습니다.</div>';
+            }
+        }
+
+        window.restoreTrash = async function(id) {
+            showConfirmDialog({
+                title: '선입금 내역 복구',
+                message: '이 내역을 휴지통에서 원래대로 복구하시겠습니까?\n\n다시 한번 이 행동을 진행하시겠습니까?',
+                icon: '♻️',
+                confirmText: '복구 진행',
+                isDanger: false,
+                onConfirm: async () => {
+                    await window.db_restoreFromTrash(id);
+                    showToast('복구되었습니다.');
+                    await loadTrashList();
+                }
+            });
+        };
+
+        window.permDeleteTrash = async function(id) {
+            showConfirmDialog({
+                title: '영구 삭제 확인',
+                message: '이 내역을 영구 삭제하시겠습니까? 삭제된 내역은 절대 복구할 수 없습니다.\n\n다시 한번 이 행동을 진행하시겠습니까?',
+                icon: '⚠️',
+                confirmText: '영구 삭제',
+                isDanger: true,
+                onConfirm: async () => {
+                    await window.db_permanentDelete(id);
+                    showToast('영구 삭제되었습니다.');
+                    await loadTrashList();
+                }
+            });
+        };
+
+        window.emptyAllTrash = async function() {
+            showConfirmDialog({
+                title: '휴지통 전체 비우기',
+                message: '휴지통의 모든 내역을 완전히 비우시겠습니까? 모든 데이터가 영구 삭제됩니다.\n\n다시 한번 이 행동을 진행하시겠습니까?',
+                icon: '🗑️',
+                confirmText: '전체 비우기',
+                isDanger: true,
+                onConfirm: async () => {
+                    await window.db_emptyTrash();
+                    showToast('휴지통을 비웠습니다.');
+                    await loadTrashList();
+                }
+            });
+        };
+    </script>
+</body>
+</html>

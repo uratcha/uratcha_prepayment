@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidReservation(data) {
+      return hasRequiredFields(['date', 'time', 'count', 'name', 'phone']) &&
+             hasOnlyAllowedFields(['date', 'time', 'count', 'tables', 'name', 'phone', 'memo']) &&
+             data.date is string && data.date.size() == 10 &&
+             data.time is string && data.time.size() == 5 &&
+             data.count is string && data.count.size() > 0 && data.count.size() <= 3 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 50 &&
+             data.phone is string && data.phone.size() >= 10 && data.phone.size() <= 20 &&
+             (!('tables' in data) || data.tables is string || data.tables is number) &&
+             (!('memo' in data) || (data.memo is string && data.memo.size() <= 200));
+    }
+
+    // 1. 기존 예약 관리 (uratcha_reservation) 호환
+    match /gogi_reservations/{reservationId} {
+      allow read, delete: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidReservation(request.resource.data);
+    }
+    match /gogi_trash/{trashId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 2. 선입금 관리 (uratcha_prepayment) 컬렉션
+    // 손님 직접 입력 및 매장 태블릿 실시간 조회/차감을 위한 권한 허용
+    match /gogi_prepayments/{paymentId} {
+      allow read, write: if true;
+    }
+    match /gogi_prepayment_trash/{trashId} {
+      allow read, write: if true;
+    }
+  }
+}
