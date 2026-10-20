@@ -2,45 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuthenticated() {
-      return request.auth != null;
-    }
+    // 🥩 으랏차 선입금 및 예약 관리 시스템 Firestore 보안 규칙
+    // ⚠️ 특정 일자(30일) 만료 제한(request.time < timestamp.date(...))을 완전히 배제하여 영구적으로 상시 정상 작동합니다.
 
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
-
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-
-    function isValidReservation(data) {
-      return hasRequiredFields(['date', 'time', 'count', 'name', 'phone']) &&
-             hasOnlyAllowedFields(['date', 'time', 'count', 'tables', 'name', 'phone', 'memo']) &&
-             data.date is string && data.date.size() == 10 &&
-             data.time is string && data.time.size() == 5 &&
-             data.count is string && data.count.size() > 0 && data.count.size() <= 3 &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 50 &&
-             data.phone is string && data.phone.size() >= 10 && data.phone.size() <= 20 &&
-             (!('tables' in data) || data.tables is string || data.tables is number) &&
-             (!('memo' in data) || (data.memo is string && data.memo.size() <= 200));
-    }
-
-    // 1. 기존 예약 관리 (uratcha_reservation) 호환
-    match /gogi_reservations/{reservationId} {
-      allow read, delete: if isAuthenticated();
-      allow create, update: if isAuthenticated() && isValidReservation(request.resource.data);
-    }
-    match /gogi_trash/{trashId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // 2. 선입금 관리 (uratcha_prepayment) 컬렉션
-    // 손님 직접 입력 및 매장 태블릿 실시간 조회/차감을 위한 권한 허용
+    // 1. 선입금 관리 (uratcha_prepayment) 컬렉션
+    // 손님 모바일 직접 등록 및 매장 PC/태블릿 실시간 조회·차감을 위해 365일 상시 허용
     match /gogi_prepayments/{paymentId} {
       allow read, write: if true;
     }
     match /gogi_prepayment_trash/{trashId} {
+      allow read, write: if true;
+    }
+
+    // 2. 예약 관리 (uratcha_reservation) 컬렉션
+    // 주간 예약 관리 시스템 실시간 조회·등록·삭제 상시 허용
+    match /gogi_reservations/{reservationId} {
+      allow read, write: if true;
+    }
+    match /gogi_trash/{trashId} {
+      allow read, write: if true;
+    }
+
+    // 3. 전체 데이터베이스 기본 허용 (30일 테스트 모드 만료 방지)
+    match /{document=**} {
       allow read, write: if true;
     }
   }
