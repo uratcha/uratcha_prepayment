@@ -594,6 +594,15 @@
             color: #fa5252;
             background: #fff5f5;
         }
+        .btn-admin-tool.excel {
+            border-color: #b2f2bb;
+            color: #2b8a3e;
+            background: #ebfbee;
+        }
+        .btn-admin-tool.excel:hover {
+            background: #d3f9d8;
+            border-color: #8ce99a;
+        }
 
         /* 관리자 테이블/카드 */
         .admin-list {
@@ -1446,6 +1455,7 @@
                 <button type="button" class="admin-filter-tab" data-filter="used" onclick="setAdminFilter('used')">🟢 사용완료</button>
             </div>
             <div class="admin-actions">
+                <button type="button" class="btn-admin-tool excel" onclick="exportPrepaymentsToExcel()" title="선입금 및 차감 내역 엑셀(CSV) 다운로드">📊 엑셀 백업</button>
                 <button type="button" class="btn-admin-tool" onclick="openTrashModal()">🗑️ 휴지통</button>
             </div>
         </div>
@@ -2199,6 +2209,115 @@
                 else t.classList.remove('active');
             });
             renderAdminDashboard();
+        };
+
+        // ------------------ 선입금 목록 및 차감 내역 전체 엑셀(CSV) 다운로드 ------------------
+        window.exportPrepaymentsToExcel = function() {
+            const items = window.prepayments || [];
+            if (items.length === 0) {
+                alert('다운로드할 선입금 내역이 없습니다.');
+                return;
+            }
+
+            // 가나다 순(한글 -> 영어 -> 기타) 정렬하여 내보내기
+            const sortedItems = [...items].sort((a, b) => {
+                const nameComp = compareCustomerNames(a.name, b.name);
+                if (nameComp !== 0) return nameComp;
+                return (b.depositDate || '').localeCompare(a.depositDate || '');
+            });
+
+            const headers = [
+                '번호',
+                '현재상태',
+                '고객명(입금자명)',
+                '연락처',
+                '입금일자',
+                '최초선입금액(원)',
+                '누적차감액(원)',
+                '현재남은잔액(원)',
+                '최근차감일자',
+                '고객요청/등록메모',
+                '최근차감메모',
+                '차감기록_상세히스토리',
+                '등록일시'
+            ];
+
+            const escapeCsv = (val) => {
+                if (val === null || val === undefined) return '""';
+                let str = String(val).replace(/"/g, '""');
+                return `"${str}"`;
+            };
+
+            const rows = [];
+            rows.push(headers.map(escapeCsv).join(','));
+
+            sortedItems.forEach((p, idx) => {
+                const remaining = Number(p.amount || 0);
+                const used = Number(p.usedAmount || 0);
+                const orig = (p.originalAmount !== undefined) ? Number(p.originalAmount) : (remaining + used);
+
+                let statusStr = '보관중';
+                if (remaining === 0 || p.status === 'used') {
+                    statusStr = '전액사용완료';
+                } else if (used > 0) {
+                    statusStr = '부분사용(잔액남음)';
+                }
+
+                // 차감 히스토리 상세 포맷팅
+                const history = Array.isArray(p.useHistory) ? p.useHistory : [];
+                let historyStr = '';
+                if (history.length > 0) {
+                    historyStr = history.map((h, hIdx) => {
+                        const hAmt = Number(h.amount || 0).toLocaleString();
+                        const hRem = Number(h.remaining || 0).toLocaleString();
+                        const noteStr = h.note ? ` [메모: ${h.note}]` : '';
+                        return `(${hIdx + 1}) ${h.date || '-'}: -${hAmt}원 (잔액: ${hRem}원)${noteStr}`;
+                    }).join(' | ');
+                } else {
+                    historyStr = '차감 이력 없음';
+                }
+
+                const rowData = [
+                    idx + 1,
+                    statusStr,
+                    p.name || '',
+                    p.phone || '',
+                    p.depositDate || '',
+                    orig,
+                    used,
+                    remaining,
+                    p.usedDate || '',
+                    p.memo || '',
+                    p.useNote || '',
+                    historyStr,
+                    p.createdAt ? p.createdAt.substring(0, 19).replace('T', ' ') : ''
+                ];
+
+                rows.push(rowData.map(escapeCsv).join(','));
+            });
+
+            // UTF-8 BOM(\uFEFF)을 추가하여 엑셀에서 바로 열어도 한글 깨짐 방지
+            const csvString = rows.join('\r\n');
+            const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+            const now = new Date();
+            const dateStr = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0') + '_' +
+                String(now.getHours()).padStart(2, '0') +
+                String(now.getMinutes()).padStart(2, '0');
+            const filename = `으랏차_선입금_차감내역_백업_${dateStr}.csv`;
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            if (window.showToast) {
+                showToast(`📊 선입금 전체 내역(${sortedItems.length}건)이 엑셀 파일로 다운로드되었습니다.`);
+            }
         };
 
         // 고객 성함 정렬 함수: 한글(가나다 순) -> 영어(ABC 순, 대소문자 무시) -> 기타(숫자/기호)
