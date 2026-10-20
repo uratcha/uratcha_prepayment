@@ -3,29 +3,26 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 🥩 으랏차 선입금 및 예약 관리 시스템 Firestore 보안 규칙
-    // ⚠️ 특정 일자(30일) 만료 제한(request.time < timestamp.date(...))을 완전히 배제하여 영구적으로 상시 정상 작동합니다.
+    // Firebase Authentication 인증을 거친 매장 직원/관리자만 읽기 및 쓰기 허용
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
 
     // 1. 선입금 관리 (uratcha_prepayment) 컬렉션
-    // 손님 모바일 직접 등록 및 매장 PC/태블릿 실시간 조회·차감을 위해 365일 상시 허용
     match /gogi_prepayments/{paymentId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
     match /gogi_prepayment_trash/{trashId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
 
     // 2. 예약 관리 (uratcha_reservation) 컬렉션
-    // 주간 예약 관리 시스템 실시간 조회·등록·삭제 상시 허용
     match /gogi_reservations/{reservationId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
     match /gogi_trash/{trashId} {
-      allow read, write: if true;
-    }
-
-    // 3. 전체 데이터베이스 기본 허용 (30일 테스트 모드 만료 방지)
-    match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
   }
 }
