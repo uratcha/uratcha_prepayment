@@ -900,6 +900,147 @@
             .admin-item-card { flex-direction: column; align-items: stretch; }
             .admin-item-right { justify-content: space-between; margin-top: 6px; }
         }
+
+        /* 🔒 전체화면 로그인 오버레이 */
+        .login-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1e1e24 0%, #111115 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 16px;
+        }
+        .login-box {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 36px 28px;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.5);
+            color: #fff;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .login-emoji {
+            font-size: 44px;
+            display: inline-block;
+            margin-bottom: 8px;
+            animation: bounce 2s infinite;
+        }
+        .login-header h2 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #ff4d4d;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+        .login-header p {
+            font-size: 13px;
+            color: #a0aec0;
+        }
+        .login-box .form-group {
+            margin-bottom: 16px;
+        }
+        .login-box .form-group label {
+            color: #cbd5e0;
+            font-size: 12.5px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .login-box .form-group input {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1.5px solid rgba(255, 255, 255, 0.16);
+            color: #fff;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.2s;
+            width: 100%;
+            outline: none;
+            font-family: inherit;
+        }
+        .login-box .form-group input:focus {
+            border-color: #ff4d4d;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.2);
+        }
+        .login-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            font-size: 13px;
+            color: #cbd5e0;
+        }
+        .login-options label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .login-options input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #ff4d4d;
+            cursor: pointer;
+        }
+        .login-error {
+            color: #fc8181;
+            font-size: 13px;
+            margin-top: -6px;
+            margin-bottom: 12px;
+            text-align: center;
+            min-height: 18px;
+            font-weight: 600;
+        }
+        .btn-login {
+            width: 100%;
+            height: 48px;
+            background: #ff4d4d;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            box-shadow: 0 4px 14px rgba(255, 77, 77, 0.35);
+            font-family: inherit;
+        }
+        .btn-login:hover {
+            background: #e63e3e;
+        }
+        .btn-login:active {
+            transform: scale(0.98);
+        }
+        .btn-logout {
+            background-color: #f1f3f5;
+            color: #495057;
+            border: 1px solid #ced4da;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-family: inherit;
+        }
+        .btn-logout:hover {
+            background-color: #e9ecef;
+            color: #fa5252;
+        }
     </style>
 
     <!-- Firebase Modular SDK v9.22.1 -->
@@ -1088,16 +1229,40 @@
                 updateSyncBadge('offline');
             });
         }
-        startPrepaymentSync();
 
-        // 익명 인증으로 세션 및 권한 유지
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                try {
-                    await signInAnonymously(auth);
-                } catch (e) {
-                    // Firestore rules allow read/write: if true로도 통신
+        // 전역 인증 함수
+        window.db_login = async (email, password) => {
+            return await signInWithEmailAndPassword(auth, email, password);
+        };
+        window.db_logout = async () => {
+            return await signOut(auth);
+        };
+
+        // 로그인 상태 실시간 감지 및 화면/동기화 제어
+        onAuthStateChanged(auth, (user) => {
+            const loginOverlay = document.getElementById('loginOverlay');
+            if (user) {
+                // 로그인 성공: 로그인 오버레이 숨김 및 실시간 동기화 시작
+                if (loginOverlay) loginOverlay.style.display = 'none';
+                startPrepaymentSync();
+            } else {
+                // 로그아웃 상태: 로그인 오버레이 노출 및 동기화 해제
+                if (loginOverlay) loginOverlay.style.display = 'flex';
+                if (unsubscribeSnapshot) {
+                    unsubscribeSnapshot();
+                    unsubscribeSnapshot = null;
                 }
+                window.prepayments = [];
+                updateSyncBadge('offline');
+
+                // 저장된 이메일 자동 입력
+                const savedEmail = localStorage.getItem('uratcha_saved_email') || 'staff@uratcha.com';
+                const emailInput = document.getElementById('loginEmail');
+                if (emailInput) emailInput.value = savedEmail;
+                setTimeout(() => {
+                    const pwInput = document.getElementById('loginPassword');
+                    if (pwInput) pwInput.focus();
+                }, 150);
             }
         });
 
@@ -1309,19 +1474,51 @@
 </head>
 <body>
 
+    <!-- 🔒 처음 접속 시 로그인 화면 오버레이 -->
+    <div class="login-overlay" id="loginOverlay" style="display: flex;">
+        <div class="login-box">
+            <div class="login-header">
+                <span class="login-emoji">🥩</span>
+                <h2>으랏차 선입금 관리</h2>
+                <p>매장 직원 및 관리자 전용 로그인</p>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">아이디 (이메일)</label>
+                    <input type="email" id="loginEmail" placeholder="staff@uratcha.com" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">비밀번호</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <div class="login-options">
+                    <label>
+                        <input type="checkbox" id="saveEmailCheckbox" checked>
+                        <span>아이디(이메일) 저장</span>
+                    </label>
+                </div>
+                <div class="login-error" id="loginError"></div>
+                <button type="submit" class="btn-login" id="btnLogin">로그인</button>
+            </form>
+        </div>
+    </div>
+
     <!-- 헤더 -->
     <header>
         <div class="header-title-container">
             <h1>🥩 으랏차 선입금 관리</h1>
             <span class="sync-badge" id="syncBadge">📡 실시간 연동중</span>
         </div>
-        <div class="font-scale-control" aria-label="글씨 크기 조절">
-            <span class="font-scale-label">글씨 크기</span>
-            <div class="font-scale-btns">
-                <button type="button" class="btn-font-scale" id="btnFontSm" onclick="setFontScale('sm')" title="글자 작게">A-</button>
-                <button type="button" class="btn-font-scale active" id="btnFontMd" onclick="setFontScale('md')" title="글자 보통">기본</button>
-                <button type="button" class="btn-font-scale" id="btnFontLg" onclick="setFontScale('lg')" title="글자 크게">A+</button>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div class="font-scale-control" aria-label="글씨 크기 조절">
+                <span class="font-scale-label">글씨 크기</span>
+                <div class="font-scale-btns">
+                    <button type="button" class="btn-font-scale" id="btnFontSm" onclick="setFontScale('sm')" title="글자 작게">A-</button>
+                    <button type="button" class="btn-font-scale active" id="btnFontMd" onclick="setFontScale('md')" title="글자 보통">기본</button>
+                    <button type="button" class="btn-font-scale" id="btnFontLg" onclick="setFontScale('lg')" title="글자 크게">A+</button>
+                </div>
             </div>
+            <button type="button" class="btn-logout" onclick="logout()" title="로그아웃">🚪 로그아웃</button>
         </div>
     </header>
 
@@ -1680,8 +1877,69 @@
     <script>
         let currentTab = 'new';
         let isAdminUnlocked = false;
-        let adminPin = localStorage.getItem('uratcha_admin_pin') || '1234';
+        let adminPin = localStorage.getItem('uratcha_admin_pin') || '9994';
+        if (adminPin === '1234') {
+            adminPin = '9994';
+            localStorage.setItem('uratcha_admin_pin', '9994');
+        }
         let currentAdminFilter = 'all';
+
+        // ------------------ 로그인 / 로그아웃 처리 ------------------
+        document.getElementById('loginForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            const btn = document.getElementById('btnLogin');
+            const saveEmail = document.getElementById('saveEmailCheckbox')?.checked;
+
+            errorDiv.innerText = '';
+            btn.disabled = true;
+            btn.innerText = '로그인 중...';
+
+            try {
+                await window.db_login(email, password);
+                if (saveEmail) {
+                    localStorage.setItem('uratcha_saved_email', email);
+                } else {
+                    localStorage.removeItem('uratcha_saved_email');
+                }
+                showToast('로그인되었습니다. 환영합니다!');
+            } catch (err) {
+                console.error("로그인 에러:", err);
+                let msg = '로그인에 실패했습니다. 아이디 또는 비밀번호를 확인해주세요.';
+                if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+                    msg = '아이디 또는 비밀번호가 올바르지 않습니다.';
+                } else if (err.code === 'auth/invalid-email') {
+                    msg = '올바른 이메일 형식으로 입력해주세요.';
+                } else if (err.code === 'auth/network-request-failed') {
+                    msg = '네트워크 연결 상태를 확인해주세요.';
+                }
+                errorDiv.innerText = msg;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '로그인';
+            }
+        });
+
+        window.logout = function() {
+            showConfirmDialog({
+                title: '로그아웃 확인',
+                message: '정말로 로그아웃 하시겠습니까?\n다시 로그인하실 때까지 화면이 잠깁니다.',
+                icon: '🚪',
+                confirmText: '로그아웃',
+                isDanger: false,
+                onConfirm: async () => {
+                    try {
+                        await window.db_logout();
+                        showToast('로그아웃 되었습니다.');
+                    } catch (err) {
+                        console.error("로그아웃 에러:", err);
+                        alert('로그아웃 중 오류가 발생했습니다: ' + err.message);
+                    }
+                }
+            });
+        };
 
         // ------------------ 글씨 크기 조절 기능 ------------------
         window.setFontScale = function(scale) {
